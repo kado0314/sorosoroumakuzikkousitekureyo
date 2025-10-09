@@ -8,8 +8,8 @@ const DISTANCE_THRESHOLD = 0.6;
 // モデルのロード (GitHub Pages上の/modelsフォルダから)
 // -------------------------------------
 const loadModels = async () => {
-    // 【重要】モデルパスを純粋な相対パスに修正
-    const MODELS_URL = './models'; 
+    // 【重要】モデルパスをルート相対パスに修正
+    const MODELS_URL = '/models'; 
     try {
         await faceapi.nets.ssdMobilenetv1.loadFromUri(MODELS_URL); // 顔検出
         await faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL); // 顔の特徴点
@@ -19,6 +19,8 @@ const loadModels = async () => {
         console.error('モデルのロードに失敗しました。/modelsフォルダが正しく配置されているか確認してください。', e);
         const statusEl = document.getElementById('cameraStatus');
         if (statusEl) statusEl.textContent = '🚨 モデルロード失敗。/modelsフォルダを確認してください。';
+        // モデルロード失敗を外部に伝播
+        throw new Error("Face model loading failed.");
     }
 };
 
