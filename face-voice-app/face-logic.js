@@ -8,8 +8,8 @@ const DISTANCE_THRESHOLD = 0.6;
 // モデルのロード (GitHub Pages上の/modelsフォルダから)
 // -------------------------------------
 const loadModels = async () => {
-    // 【重要】モデルパスをルート相対パスに修正
-    const MODELS_URL = '/models'; 
+    // 【重要】モデルパスを純粋な相対パスに修正
+    const MODELS_URL = './models'; 
     try {
         await faceapi.nets.ssdMobilenetv1.loadFromUri(MODELS_URL); // 顔検出
         await faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL); // 顔の特徴点
