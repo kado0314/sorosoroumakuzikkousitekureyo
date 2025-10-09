@@ -8,7 +8,8 @@ const DISTANCE_THRESHOLD = 0.6;
 // モデルのロード (GitHub Pages上の/modelsフォルダから)
 // -------------------------------------
 const loadModels = async () => {
-    const MODELS_URL = './models'; // index.htmlからの相対パス
+    // パスをルートからの相対パスに設定
+    const MODELS_URL = './models'; 
     try {
         await faceapi.nets.ssdMobilenetv1.loadFromUri(MODELS_URL); // 顔検出
         await faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL); // 顔の特徴点
@@ -17,6 +18,7 @@ const loadModels = async () => {
     } catch (e) {
         console.error('モデルのロードに失敗しました。/modelsフォルダが正しく配置されているか確認してください。', e);
         const statusEl = document.getElementById('cameraStatus');
+        // モデルロード失敗時、カメラステータスにエラーを表示
         if (statusEl) statusEl.textContent = '🚨 モデルロード失敗。/modelsフォルダを確認してください。';
     }
 };
@@ -142,18 +144,4 @@ const startFaceDetection = (videoEl, canvasEl, statusEl) => {
 
     }, 200); // 200ミリ秒 (5FPS) ごとに処理。PC性能に応じて調整してください。
 };
-
-// -------------------------------------
-// 初期化イベント (登録ボタンの紐付けなど)
-// -------------------------------------
-document.addEventListener('DOMContentLoaded', () => {
-    // 登録ボタンのイベント
-    document.getElementById('registerFaceBtn').addEventListener('click', () => {
-        const name = document.getElementById('personName').value.trim();
-        const files = document.getElementById('imageUpload').files;
-        registerFace(name, files);
-    });
-    
-    // 最初にリストを空で描画
-    updateRegisteredList();
-});
+// ⚠️ 注意: ここには document.addEventListener('DOMContentLoaded', ...) ブロックはありません。
