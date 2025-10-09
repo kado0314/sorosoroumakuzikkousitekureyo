@@ -37,7 +37,6 @@ if (SpeechRecognition) {
     };
 
     recognition.onend = () => {
-        // ユーザーが明示的に停止していない場合、自動で再起動
         if (isListening) recognition.start();
         else voiceStatus.textContent = '待機中...';
     };
@@ -54,7 +53,7 @@ if (SpeechRecognition) {
             isListening = false;
             recognition.stop();
         } else {
-            outputVoice.value = ''; // 開始時にテキストエリアをクリア
+            outputVoice.value = '';
             recognition.start();
         }
     });
@@ -80,7 +79,7 @@ const cameraStatus = document.getElementById('cameraStatus');
 
 let cameraStream = null;
 let isCameraOn = false;
-let detectionInterval = null; // face-logic.jsで定義されたインターバルIDを保持
+let detectionInterval = null;
 
 // カメラ起動/停止を制御する関数
 const toggleCamera = async () => {
@@ -98,7 +97,6 @@ const toggleCamera = async () => {
     } else {
         // カメラ起動
         try {
-            // カメラの許可を求める (音声は不要なのでaudio: false)
             cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
             webcamVideo.srcObject = cameraStream;
             webcamVideo.style.display = 'block';
@@ -107,9 +105,8 @@ const toggleCamera = async () => {
             toggleCameraBtn.textContent = '停止';
             isCameraOn = true;
             
-            // 映像メタデータがロードされたら、顔認識を開始
             webcamVideo.onloadedmetadata = () => {
-                // face-logic.jsの関数を呼び出し、顔認識ループを開始
+                // face-logic.jsで定義された関数を呼び出し、顔認識ループを開始
                 detectionInterval = startFaceDetection(webcamVideo, overlayCanvas, cameraStatus); 
             };
         } catch (err) {
@@ -120,8 +117,25 @@ const toggleCamera = async () => {
     }
 };
 
+// -------------------------------------
+// 3. 初期化処理の集約
+// -------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
-    // face-logic.jsで定義されたモデルロード関数を呼び出し
+    // 1. モデルロードの開始 (face-logic.jsから呼び出し)
+    // ⚠️ これが成功しないと、顔認識機能は動きません。
     loadModels(); 
+
+    // 2. カメラ起動/停止ボタンのイベント設定
     toggleCameraBtn.addEventListener('click', toggleCamera);
+    
+    // 3. 顔登録ボタンのイベント設定 (face-logic.jsから移動)
+    document.getElementById('registerFaceBtn').addEventListener('click', () => {
+        const name = document.getElementById('personName').value.trim();
+        const files = document.getElementById('imageUpload').files;
+        // face-logic.jsのregisterFace関数を呼び出す
+        registerFace(name, files);
+    });
+    
+    // 4. 登録リストの初期描画 (face-logic.jsから移動)
+    updateRegisteredList();
 });
