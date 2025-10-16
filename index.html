@@ -41,7 +41,16 @@
             <label for="notificationUrl">通知クリック時のURL:</label>
             <input type="url" id="notificationUrl" value="https://www.google.com/" placeholder="URLを入力">
         </div>
-    </div>
+        
+        <div class="setting" style="margin-top: 15px;">
+            <label>通知クリック時の動作 (デフォルト: Google):</label><br>
+            <input type="radio" id="openTab" name="openAction" value="tab" checked> 
+            <label for="openTab">新しいタブで開く</label><br>
+            
+            <input type="radio" id="openWindow" name="openAction" value="window"> 
+            <label for="openWindow">新しいウィンドウで開く</label>
+        </div>
+        </div>
     
     <video id="webcamVideo" width="640" height="480" autoplay muted></video>
     
