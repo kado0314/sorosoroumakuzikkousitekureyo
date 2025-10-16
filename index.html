@@ -3,15 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>Webカメラ監視＆通知システム</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #webcamVideo { display: block; border: 1px solid #ccc; margin-bottom: 10px; }
         #controls { margin-bottom: 20px; }
         .setting { margin-top: 10px; }
+        #chartContainer { 
+            width: 640px; 
+            height: 300px; /* グラフの高さ設定 */
+            margin-top: 20px; 
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
     </style>
 </head>
 <body>
-    <h1>Webカメラ監視システムぅ</h1>
+    <h1>Webカメラ監視システム</h1>
 
     <div id="controls">
         <button id="startButton">監視スタート</button>
@@ -31,6 +39,11 @@
     <video id="webcamVideo" width="640" height="480" autoplay muted></video>
     
     <canvas id="processingCanvas" width="640" height="480" style="display:none;"></canvas>
+    
+    <div id="chartContainer">
+        <h2>リアルタイム変化レベル</h2>
+        <canvas id="changeChart"></canvas>
+    </div>
 
     <script src="main.js"></script>
 </body>
