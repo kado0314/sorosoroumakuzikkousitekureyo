@@ -2,32 +2,33 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Webカメラ監視＆通知システム</title>
+    <title>Webカメラ監視＆人物検出通知</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/cocossd.min.js"></script>
+    
     <style>
         body { font-family: sans-serif; padding: 20px; }
-        #webcamVideo { display: block; border: 1px solid #ccc; margin-bottom: 10px; }
+        #webcamVideo { display: block; border: 1px solid #ccc; margin-bottom: 10px; position: absolute; }
+        /* 検出結果のオーバーレイを映像の上に重ねるためのスタイル */
+        #overlayCanvas { position: absolute; top: 0; left: 0; border: 1px solid red; }
+        #videoContainer { position: relative; width: 640px; height: 480px; margin-bottom: 20px; }
         #controls { margin-bottom: 20px; }
         .setting { margin-top: 10px; }
-        #chartContainer { 
-            width: 640px; 
-            height: 300px; /* グラフの高さ設定 */
-            margin-top: 20px; 
-            padding: 10px;
-            border: 1px solid #ddd;
-        }
+        #chartContainer { width: 640px; height: 300px; margin-top: 20px; padding: 10px; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
-    <h1>Webカメラ監視システム</h1>
+    <h1>Webカメラ監視システム (人数検出)</h1>
 
     <div id="controls">
         <button id="startButton">監視スタート</button>
         <button id="stopButton" disabled>監視停止</button>
 
         <div class="setting">
-            <label for="thresholdSlider">感度レベル (しきい値): <span id="thresholdValue">50</span></label>
-            <input type="range" id="thresholdSlider" min="10" max="100" value="50">
+            <label for="personCountSlider">通知人数しきい値: <span id="personCountValue">2</span>人以上</label>
+            <input type="range" id="personCountSlider" min="1" max="10" value="2">
         </div>
 
         <div class="setting">
@@ -35,13 +36,14 @@
             <input type="url" id="notificationUrl" value="https://www.google.com/" placeholder="URLを入力">
         </div>
     </div>
+    
+    <div id="videoContainer">
+        <video id="webcamVideo" width="640" height="480" autoplay muted></video>
+        <canvas id="overlayCanvas" width="640" height="480"></canvas>
+    </div>
 
-    <video id="webcamVideo" width="640" height="480" autoplay muted></video>
-    
-    <canvas id="processingCanvas" width="640" height="480" style="display:none;"></canvas>
-    
     <div id="chartContainer">
-        <h2>リアルタイム変化レベル</h2>
+        <h2>リアルタイム検出人数</h2>
         <canvas id="changeChart"></canvas>
     </div>
 
