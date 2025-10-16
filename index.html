@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>画像変化監視システム</title>
+    <script>const VAPID_PUBLIC_KEY = 'YOUR_PUBLIC_VAPID_KEY_HERE';</script> 
+</head>
+<body>
+    <h1>Webカメラ監視</h1>
+    <video id="webcamVideo" width="640" height="480" autoplay></video>
+    <canvas id="processingCanvas" width="640" height="480" style="display:none;"></canvas>
+    
+    <div>
+        <label for="notificationUrl">通知クリック時のURL:</label>
+        <input type="url" id="notificationUrl" value="https://www.google.com/">
+    </div>
+    <button id="startButton">監視スタート</button>
+    <button id="stopButton" disabled>監視停止</button>
+
+    <script src="main.js"></script>
+</body>
+</html>
