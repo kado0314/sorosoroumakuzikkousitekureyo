@@ -8,20 +8,23 @@ const startButton = document.getElementById('startButton');
 const stopButton = document.getElementById('stopButton');
 const thresholdSlider = document.getElementById('thresholdSlider');
 const thresholdValueSpan = document.getElementById('thresholdValue');
-// 🌟 追加: メッセージ入力欄のDOM取得 🌟
 const notificationTitleInput = document.getElementById('notificationTitle');
 const notificationBodyInput = document.getElementById('notificationBody');
-
 
 let lastFrameData = null;
 let monitoringInterval = null;
 let isMonitoring = false;
 let chartInstance = null;
+
+// 🌟 新規追加: 通知クールダウン機能用変数 🌟
+let lastNotificationTime = 0;
+const NOTIFICATION_COOLDOWN_MS = 5000; // 5秒間隔
+
 const MAX_DATA_POINTS = 50;
 
 
 // =================================================================
-// UI/チャート関連
+// UI/チャート関連 (変更なし)
 // =================================================================
 
 // 感度レベルスライダーの更新とグラフ更新
@@ -100,12 +103,10 @@ function updateChart(averageChangeMagnitude) {
 
 
 // =================================================================
-// 通知機能 (Notification API) を修正
+// 通知機能 (Notification API) (変更なし)
 // =================================================================
 
-// 🌟 showNotification関数を修正 🌟
 function showNotification(targetUrl) {
-    // HTML入力欄からタイトルと本文を取得 (空の場合はデフォルトを使用)
     const title = notificationTitleInput.value || '【通知タイトルなし】';
     const body = notificationBodyInput.value || '動きを検出しました。';
 
@@ -121,22 +122,31 @@ function showNotification(targetUrl) {
 }
 
 function triggerNotificationLocal() {
+    // 🌟 修正: クールダウンチェックを追加 🌟
+    const currentTime = Date.now();
+    if (currentTime - lastNotificationTime < NOTIFICATION_COOLDOWN_MS) {
+        console.log(`--- 通知クールダウン中 (${NOTIFICATION_COOLDOWN_MS / 1000}秒) ---`);
+        return; 
+    }
+
     const notificationUrl = document.getElementById('notificationUrl').value || 'https://www.google.com/';
 
     if (Notification.permission === 'default') {
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
                 showNotification(notificationUrl);
+                lastNotificationTime = currentTime; // 通知発動時刻を更新
             }
         });
     } else if (Notification.permission === 'granted') {
         showNotification(notificationUrl);
+        lastNotificationTime = currentTime; // 通知発動時刻を更新
     }
 }
 
 
 // =================================================================
-// 監視ロジック
+// 監視ロジック (変更なし)
 // =================================================================
 
 startButton.addEventListener('click', () => {
@@ -181,11 +191,13 @@ stopButton.addEventListener('click', () => {
     isMonitoring = false;
     startButton.disabled = false;
     stopButton.disabled = true;
+    lastNotificationTime = 0; // 停止時にリセット
 });
 
 function startMonitoring() {
     isMonitoring = true;
     lastFrameData = null;
+    lastNotificationTime = 0; // 監視開始時にリセット
     monitoringInterval = setInterval(processFrame, 100); 
 }
 
@@ -203,7 +215,6 @@ function processFrame() {
     let totalMagnitude = 0; 
     const pixelCount = (canvas.width * canvas.height);
 
-    // 全ピクセルをチェックし、変化量の合計 (totalMagnitude) を計算
     for (let i = 0; i < currentFrameData.length; i += 4) {
         const diffR = Math.abs(currentFrameData[i] - lastFrameData[i]);
         const diffG = Math.abs(currentFrameData[i + 1] - lastFrameData[i + 1]);
@@ -212,11 +223,9 @@ function processFrame() {
         totalMagnitude += (diffR + diffG + diffB);
     }
 
-    // 1ピクセルあたりの平均変化量を算出 (グラフの青い線となる値)
     const averageChangeMagnitude = totalMagnitude / pixelCount;
     updateChart(averageChangeMagnitude); 
 
-    // 🌟 デバッグ情報の出力 🌟
     const thresholdValue = parseInt(thresholdSlider.value);
     const difference = averageChangeMagnitude - thresholdValue;
     console.log(`平均変化: ${averageChangeMagnitude.toFixed(2)} | しきい値: ${thresholdValue} | 差: ${difference.toFixed(2)}`);
@@ -229,7 +238,6 @@ function processFrame() {
         // 検出後に基準フレームを更新し、連続通知を抑制
         lastFrameData = new Uint8ClampedArray(currentFrameData);
     } else {
-        // 変化がなければ、次の比較のために現行フレームを基準として保存
         lastFrameData = new Uint8ClampedArray(currentFrameData);
     }
 }
