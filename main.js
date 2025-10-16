@@ -8,6 +8,10 @@ const startButton = document.getElementById('startButton');
 const stopButton = document.getElementById('stopButton');
 const thresholdSlider = document.getElementById('thresholdSlider');
 const thresholdValueSpan = document.getElementById('thresholdValue');
+// 🌟 追加: メッセージ入力欄のDOM取得 🌟
+const notificationTitleInput = document.getElementById('notificationTitle');
+const notificationBodyInput = document.getElementById('notificationBody');
+
 
 let lastFrameData = null;
 let monitoringInterval = null;
@@ -96,12 +100,17 @@ function updateChart(averageChangeMagnitude) {
 
 
 // =================================================================
-// 通知機能 (Notification API)
+// 通知機能 (Notification API) を修正
 // =================================================================
 
+// 🌟 showNotification関数を修正 🌟
 function showNotification(targetUrl) {
-    const notification = new Notification('🚨 警告：動きを検出しました！', {
-        body: '設定領域で画像の変化を検出。画面を確認してください。',
+    // HTML入力欄からタイトルと本文を取得 (空の場合はデフォルトを使用)
+    const title = notificationTitleInput.value || '【通知タイトルなし】';
+    const body = notificationBodyInput.value || '動きを検出しました。';
+
+    const notification = new Notification(title, {
+        body: body,
         icon: 'https://via.placeholder.com/128' 
     });
 
@@ -213,8 +222,6 @@ function processFrame() {
     console.log(`平均変化: ${averageChangeMagnitude.toFixed(2)} | しきい値: ${thresholdValue} | 差: ${difference.toFixed(2)}`);
     
     // 🌟 通知判定ロジック 🌟
-    // 平均変化量が、スライダーで設定された値（しきい値）を超えたら通知
-    
     if (averageChangeMagnitude > thresholdValue) {
         console.log(`>>> 通知トリガー発動!`);
         triggerNotificationLocal(); 
