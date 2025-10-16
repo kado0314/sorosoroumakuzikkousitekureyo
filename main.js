@@ -144,6 +144,7 @@ startButton.addEventListener('click', async () => {
 
     try {
         // 1. COCO-SSDモデルの読み込み
+        // 🌟 ローカルファイルを使用しているため、エラーは発生しにくいはずです 🌟
         model = await cocoSsd.load();
         
         const initialCount = parseInt(personCountSlider.value);
@@ -160,8 +161,9 @@ startButton.addEventListener('click', async () => {
             isMonitoring = true;
         };
     } catch (err) {
+        // ローカルファイルでもアクセス権限の問題などで失敗する可能性はあります
         console.error("エラーが発生しました:", err);
-        alert("モデルの読み込みまたはWebカメラアクセスに失敗しました。");
+        alert("モデルの読み込みまたはWebカメラアクセスに失敗しました。ローカルサーバー(http://localhost)からのアクセスを試してください。");
         startButton.textContent = '監視スタート';
         startButton.disabled = false;
     }
@@ -197,7 +199,6 @@ async function detectFrame() {
     if (!model || !isMonitoring) return;
 
     // 検出実行
-    // ブラウザメモリ負荷を軽減するため、tf.tidyでメモリ管理
     const predictions = await tf.tidy(() => model.detect(video));
     
     // Canvasをクリアして、検出結果を描画
