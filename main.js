@@ -17,13 +17,16 @@ let isMonitoring = false;
 let chartInstance = null;
 
 let lastNotificationTime = 0;
-const NOTIFICATION_COOLDOWN_MS = 5000; // 5秒間隔
+const NOTIFICATION_COOLDOWN_MS = 5000; // 5秒間隔 (※今回の変更で実質無効化されます)
+
+// 🌟 新規追加: 一度通知を送ったら停止するためのフラグ 🌟
+let hasNotifiedSinceStart = false; 
 
 const MAX_DATA_POINTS = 50;
 
 
 // =================================================================
-// UI/チャート関連
+// UI/チャート関連 (変更なし)
 // =================================================================
 
 // 感度レベルスライダーの更新とグラフ更新
@@ -114,40 +117,28 @@ function showNotification(targetUrl) {
         icon: 'https://via.placeholder.com/128' 
     });
 
-    // 🌟 修正: クリック時のアクションをユーザー選択に基づいて処理 🌟
     notification.onclick = function() {
         notification.close();
         
-        // ユーザーの選択を読み取る
         const selectedAction = document.querySelector('input[name="openAction"]:checked').value;
         
-        let target;
         if (selectedAction === 'window') {
-            // 新しいウィンドウとして開くことをブラウザに推奨
-            target = '_blank'; // ポップアップを許可しやすいよう、_blankを使用しつつサイズ指定などでウィンドウ感を出すことも可能ですが、ここではシンプルに
-        } else {
-            // 新しいタブとして開く
-            target = '_blank';
-        }
-        
-        // URLを開く。_blankは通常タブで開きますが、ウィンドウ名を設定することでウィンドウとして認識されやすくなります。
-        // ここではtargetをシンプルに_blankとして、ブラウザのデフォルト処理に任せます。
-        // ※「ウィンドウで開く」を確実に実行するには、window.open(url, 'WindowName', 'width=800,height=600')のように
-        // 第3引数を使う必要がありますが、シンプルな切り替えのため、ここでは_blankで新しいタブ/ウィンドウを指示します。
-        
-        if (selectedAction === 'window') {
-            // 新しいウィンドウとして開く (target nameで区別)
             window.open(targetUrl, 'NotificationWindow', 'width=800,height=600,noopener=yes');
         } else {
-            // 新しいタブで開く
             window.open(targetUrl, '_blank');
         }
     };
-    // 🌟 修正ここまで 🌟
 }
 
 function triggerNotificationLocal() {
+    // 🌟 新規ロジック: 一度通知済みなら即座に終了 🌟
+    if (hasNotifiedSinceStart) {
+        console.log("--- 監視セッション中に通知済みのため、スキップします。 ---");
+        return;
+    }
+    
     const currentTime = Date.now();
+    // 5秒のクールダウンチェックは残すが、hasNotifiedSinceStartフラグが優先されるため、一度発動すればこのチェックは無視される
     if (currentTime - lastNotificationTime < NOTIFICATION_COOLDOWN_MS) {
         console.log(`--- 通知クールダウン中 (${NOTIFICATION_COOLDOWN_MS / 1000}秒) ---`);
         return; 
@@ -155,16 +146,22 @@ function triggerNotificationLocal() {
 
     const notificationUrl = document.getElementById('notificationUrl').value || 'https://www.google.com/';
 
+    // 通知を送信し、フラグを立てるためのヘルパー関数
+    const sendAndSetFlag = () => {
+        showNotification(notificationUrl);
+        lastNotificationTime = currentTime;
+        hasNotifiedSinceStart = true; // 🌟 フラグをONにする 🌟
+        console.log("!!! 監視セッション中の最初の通知を送信しました。以降の通知は停止します。 !!!");
+    };
+
     if (Notification.permission === 'default') {
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
-                showNotification(notificationUrl);
-                lastNotificationTime = currentTime;
+                sendAndSetFlag();
             }
         });
     } else if (Notification.permission === 'granted') {
-        showNotification(notificationUrl);
-        lastNotificationTime = currentTime;
+        sendAndSetFlag();
     }
 }
 
@@ -216,12 +213,14 @@ stopButton.addEventListener('click', () => {
     startButton.disabled = false;
     stopButton.disabled = true;
     lastNotificationTime = 0;
+    hasNotifiedSinceStart = false; // 停止時にリセット
 });
 
 function startMonitoring() {
     isMonitoring = true;
     lastFrameData = null;
     lastNotificationTime = 0;
+    hasNotifiedSinceStart = false; // 🌟 監視開始時にリセット 🌟
     monitoringInterval = setInterval(processFrame, 100); 
 }
 
