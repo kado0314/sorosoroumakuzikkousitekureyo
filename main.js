@@ -2,7 +2,7 @@
 
 // DOM要素の取得
 const video = document.getElementById('webcamVideo');
-const overlayCanvas = document.getElementById('overlayCanvas'); // 新しいオーバーレイCanvas
+const overlayCanvas = document.getElementById('overlayCanvas');
 const overlayCtx = overlayCanvas.getContext('2d');
 const startButton = document.getElementById('startButton');
 const stopButton = document.getElementById('stopButton');
@@ -11,9 +11,9 @@ const personCountValueSpan = document.getElementById('personCountValue');
 
 let monitoringInterval = null;
 let isMonitoring = false;
-let model = null; // TensorFlow.js モデルを格納
+let model = null; // TensorFlow.js モデル
 let chartInstance = null;
-const MAX_DATA_POINTS = 50;
+const MAX_DATA_POINTS = 50; // グラフの表示ポイント数
 
 // --- UI/チャート関連 ---
 
@@ -22,14 +22,14 @@ personCountSlider.addEventListener('input', () => {
     const value = parseInt(personCountSlider.value);
     personCountValueSpan.textContent = value;
     if (chartInstance) {
-        // グラフのしきい値ラインもリアルタイムで更新
+        // グラフのしきい値ラインをリアルタイムで更新
         const dataSet = chartInstance.data.datasets[0].data;
         chartInstance.data.datasets[1].data = Array(dataSet.length).fill(value);
         chartInstance.update();
     }
 });
 
-// グラフの初期化 (人数表示用に調整)
+// グラフの初期化
 function initializeChart(initialCount) {
     if (chartInstance) chartInstance.destroy();
     
@@ -44,7 +44,7 @@ function initializeChart(initialCount) {
                 data: [],
                 borderColor: 'rgb(75, 192, 192)',
                 tension: 0.2,
-                fill: true, // 塗りつぶし
+                fill: true,
                 backgroundColor: 'rgba(75, 192, 192, 0.3)',
                 pointRadius: 0
             }, {
@@ -61,7 +61,7 @@ function initializeChart(initialCount) {
             scales: {
                 y: {
                     min: 0,
-                    max: 5, // Y軸の最大値を5人に設定
+                    max: 5, // Y軸の最大人数（必要に応じて調整）
                     title: {
                         display: true,
                         text: '検出人数'
@@ -99,7 +99,7 @@ function updateChart(detectedPeople) {
 }
 
 
-// --- 通知機能 (Notification API) ---
+// --- 通知機能 (Notification API - キー不要) ---
 
 function showNotification(targetUrl, count) {
     const notification = new Notification('🚨 警告：規定人数以上の人物を検出！', {
@@ -116,6 +116,7 @@ function showNotification(targetUrl, count) {
 function triggerNotificationLocal(count) {
     const notificationUrl = document.getElementById('notificationUrl').value || 'https://www.google.com/';
 
+    // ユーザーに通知の許可を求める（一度だけ必要）
     if (Notification.permission === 'default') {
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
@@ -142,19 +143,19 @@ startButton.addEventListener('click', async () => {
     startButton.disabled = true;
 
     try {
-        // COCO-SSDモデルの読み込み
+        // 1. COCO-SSDモデルの読み込み
         model = await cocoSsd.load();
         
         const initialCount = parseInt(personCountSlider.value);
         initializeChart(initialCount);
         
-        // Webカメラへのアクセス要求
+        // 2. Webカメラへのアクセス要求
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
         video.onloadedmetadata = () => {
             video.play();
             startMonitoring();
-            startButton.textContent = '監視スタート';
+            startButton.textContent = '監視中';
             stopButton.disabled = false;
             isMonitoring = true;
         };
@@ -187,7 +188,7 @@ stopButton.addEventListener('click', () => {
 });
 
 function startMonitoring() {
-    // 検出処理は負荷が高いため、ここでは約4FPS (250ms) で実行
+    // 検出処理は負荷が高いため、約4FPS (250ms) で実行
     monitoringInterval = setInterval(detectFrame, 250); 
 }
 
@@ -196,7 +197,8 @@ async function detectFrame() {
     if (!model || !isMonitoring) return;
 
     // 検出実行
-    const predictions = await model.detect(video);
+    // ブラウザメモリ負荷を軽減するため、tf.tidyでメモリ管理
+    const predictions = await tf.tidy(() => model.detect(video));
     
     // Canvasをクリアして、検出結果を描画
     overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
@@ -205,7 +207,7 @@ async function detectFrame() {
 
     // 検出結果を処理
     predictions.forEach(prediction => {
-        // 信頼度が高い「人」だけをカウント
+        // 信頼度が高い 'person' だけをカウント
         if (prediction.class === 'person' && prediction.score > 0.6) {
             personCount++;
             drawBoundingBox(prediction); // 検出枠を描画
@@ -236,6 +238,6 @@ function drawBoundingBox(prediction) {
     // ラベル
     overlayCtx.fillStyle = 'red';
     overlayCtx.font = '18px Arial';
-    const text = `${prediction.class} (${Math.round(prediction.score * 100)}%)`;
-    overlayCtx.fillText(text, x, y > 10 ? y - 5 : 10);
+    const text = `人 (${Math.round(prediction.score * 100)}%)`;
+    overlayCtx.fillText(text, x, y > 10 ? y - 5 : 20); // y座標を調整して見やすくする
 }
