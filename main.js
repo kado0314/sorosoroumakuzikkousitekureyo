@@ -1,32 +1,37 @@
-// main.js に追加するローカル通知処理
-function triggerNotificationLocal() {
-    const notificationUrl = document.getElementById('notificationUrl').value || 'https://www.google.com/';
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Webカメラ監視＆通知システム</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #webcamVideo { display: block; border: 1px solid #ccc; margin-bottom: 10px; }
+        #controls { margin-bottom: 20px; }
+        .setting { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Webカメラ監視システム</h1>
 
-    // 1. ユーザーに通知の許可を求める（一度だけ必要）
-    if (Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                showNotification(notificationUrl);
-            }
-        });
-    } else if (Notification.permission === 'granted') {
-        // 2. 許可済みであれば通知を表示
-        showNotification(notificationUrl);
-    }
-    // 'denied'（拒否）の場合は通知を表示しない
-}
+    <div id="controls">
+        <button id="startButton">監視スタート</button>
+        <button id="stopButton" disabled>監視停止</button>
 
-function showNotification(targetUrl) {
-    // 3. デスクトップ通知の設定
-    const notification = new Notification('🚨 警告：動きを検出しました！', {
-        body: '設定された監視領域で画像の変化を検出。画面を確認してください。',
-        icon: '/icon.png' // 通知に表示するアイコン
-    });
+        <div class="setting">
+            <label for="thresholdSlider">感度レベル (しきい値): <span id="thresholdValue">50</span></label>
+            <input type="range" id="thresholdSlider" min="10" max="100" value="50">
+        </div>
 
-    // 4. 通知クリック時のイベントハンドラを設定
-    notification.onclick = function() {
-        // 事前に登録したURLに遷移
-        window.open(targetUrl, '_blank'); // 新しいGoogleウィンドウを開く処理
-        notification.close();
-    };
-}
+        <div class="setting">
+            <label for="notificationUrl">通知クリック時のURL:</label>
+            <input type="url" id="notificationUrl" value="https://www.google.com/" placeholder="URLを入力">
+        </div>
+    </div>
+
+    <video id="webcamVideo" width="640" height="480" autoplay muted></video>
+    
+    <canvas id="processingCanvas" width="640" height="480" style="display:none;"></canvas>
+
+    <script src="main.js"></script>
+</body>
+</html>
