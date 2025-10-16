@@ -16,7 +16,6 @@ let monitoringInterval = null;
 let isMonitoring = false;
 let chartInstance = null;
 
-// 🌟 新規追加: 通知クールダウン機能用変数 🌟
 let lastNotificationTime = 0;
 const NOTIFICATION_COOLDOWN_MS = 5000; // 5秒間隔
 
@@ -24,7 +23,7 @@ const MAX_DATA_POINTS = 50;
 
 
 // =================================================================
-// UI/チャート関連 (変更なし)
+// UI/チャート関連
 // =================================================================
 
 // 感度レベルスライダーの更新とグラフ更新
@@ -103,7 +102,7 @@ function updateChart(averageChangeMagnitude) {
 
 
 // =================================================================
-// 通知機能 (Notification API) (変更なし)
+// 通知機能 (Notification API)
 // =================================================================
 
 function showNotification(targetUrl) {
@@ -115,14 +114,39 @@ function showNotification(targetUrl) {
         icon: 'https://via.placeholder.com/128' 
     });
 
+    // 🌟 修正: クリック時のアクションをユーザー選択に基づいて処理 🌟
     notification.onclick = function() {
-        window.open(targetUrl, '_blank');
         notification.close();
+        
+        // ユーザーの選択を読み取る
+        const selectedAction = document.querySelector('input[name="openAction"]:checked').value;
+        
+        let target;
+        if (selectedAction === 'window') {
+            // 新しいウィンドウとして開くことをブラウザに推奨
+            target = '_blank'; // ポップアップを許可しやすいよう、_blankを使用しつつサイズ指定などでウィンドウ感を出すことも可能ですが、ここではシンプルに
+        } else {
+            // 新しいタブとして開く
+            target = '_blank';
+        }
+        
+        // URLを開く。_blankは通常タブで開きますが、ウィンドウ名を設定することでウィンドウとして認識されやすくなります。
+        // ここではtargetをシンプルに_blankとして、ブラウザのデフォルト処理に任せます。
+        // ※「ウィンドウで開く」を確実に実行するには、window.open(url, 'WindowName', 'width=800,height=600')のように
+        // 第3引数を使う必要がありますが、シンプルな切り替えのため、ここでは_blankで新しいタブ/ウィンドウを指示します。
+        
+        if (selectedAction === 'window') {
+            // 新しいウィンドウとして開く (target nameで区別)
+            window.open(targetUrl, 'NotificationWindow', 'width=800,height=600,noopener=yes');
+        } else {
+            // 新しいタブで開く
+            window.open(targetUrl, '_blank');
+        }
     };
+    // 🌟 修正ここまで 🌟
 }
 
 function triggerNotificationLocal() {
-    // 🌟 修正: クールダウンチェックを追加 🌟
     const currentTime = Date.now();
     if (currentTime - lastNotificationTime < NOTIFICATION_COOLDOWN_MS) {
         console.log(`--- 通知クールダウン中 (${NOTIFICATION_COOLDOWN_MS / 1000}秒) ---`);
@@ -135,18 +159,18 @@ function triggerNotificationLocal() {
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
                 showNotification(notificationUrl);
-                lastNotificationTime = currentTime; // 通知発動時刻を更新
+                lastNotificationTime = currentTime;
             }
         });
     } else if (Notification.permission === 'granted') {
         showNotification(notificationUrl);
-        lastNotificationTime = currentTime; // 通知発動時刻を更新
+        lastNotificationTime = currentTime;
     }
 }
 
 
 // =================================================================
-// 監視ロジック (変更なし)
+// 監視ロジック
 // =================================================================
 
 startButton.addEventListener('click', () => {
@@ -191,13 +215,13 @@ stopButton.addEventListener('click', () => {
     isMonitoring = false;
     startButton.disabled = false;
     stopButton.disabled = true;
-    lastNotificationTime = 0; // 停止時にリセット
+    lastNotificationTime = 0;
 });
 
 function startMonitoring() {
     isMonitoring = true;
     lastFrameData = null;
-    lastNotificationTime = 0; // 監視開始時にリセット
+    lastNotificationTime = 0;
     monitoringInterval = setInterval(processFrame, 100); 
 }
 
@@ -230,12 +254,10 @@ function processFrame() {
     const difference = averageChangeMagnitude - thresholdValue;
     console.log(`平均変化: ${averageChangeMagnitude.toFixed(2)} | しきい値: ${thresholdValue} | 差: ${difference.toFixed(2)}`);
     
-    // 🌟 通知判定ロジック 🌟
     if (averageChangeMagnitude > thresholdValue) {
         console.log(`>>> 通知トリガー発動!`);
         triggerNotificationLocal(); 
 
-        // 検出後に基準フレームを更新し、連続通知を抑制
         lastFrameData = new Uint8ClampedArray(currentFrameData);
     } else {
         lastFrameData = new Uint8ClampedArray(currentFrameData);
