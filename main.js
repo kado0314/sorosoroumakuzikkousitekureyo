@@ -9,29 +9,109 @@ const stopButton = document.getElementById('stopButton');
 const thresholdSlider = document.getElementById('thresholdSlider');
 const thresholdValueSpan = document.getElementById('thresholdValue');
 
-let lastFrameData = null; // 基準フレームのピクセルデータを格納
+let lastFrameData = null;      // 基準フレームのピクセルデータを格納
 let monitoringInterval = null; // 監視処理のインターバルID
-let isMonitoring = false; // 監視状態フラグ
+let isMonitoring = false;      // 監視状態フラグ
+let chartInstance = null;      // Chart.js インスタンス
+const MAX_DATA_POINTS = 50;    // グラフに表示するデータポイントの最大数
+const SENSITIVITY_MULTIPLIER = 7.65; // しきい値の調整係数 (100 * 7.65 = 約765でRGB最大差分合計)
+const NOTIFICATION_PIXEL_PERCENTAGE = 0.005; // 0.5%以上のピクセル変化で通知
+
+// =================================================================
+// UI/チャート関連
+// =================================================================
 
 // 感度レベルスライダーの更新
 thresholdSlider.addEventListener('input', () => {
-    thresholdValueSpan.textContent = thresholdSlider.value;
+    const value = parseInt(thresholdSlider.value);
+    thresholdValueSpan.textContent = value;
+    if (chartInstance) {
+        // グラフのしきい値ラインもリアルタイムで更新
+        const newThreshold = value * SENSITIVITY_MULTIPLIER;
+        const dataSet = chartInstance.data.datasets[0].data;
+        chartInstance.data.datasets[1].data = Array(dataSet.length).fill(newThreshold);
+        chartInstance.update();
+    }
 });
 
+// グラフの初期化
+function initializeChart(initialThreshold) {
+    if (chartInstance) chartInstance.destroy(); // 既存インスタンスを破棄
+    
+    const ctxChart = document.getElementById('changeChart').getContext('2d');
+    const thresholdLineValue = initialThreshold * SENSITIVITY_MULTIPLIER;
+
+    chartInstance = new Chart(ctxChart, {
+        type: 'line',
+        data: {
+            labels: Array(MAX_DATA_POINTS).fill(''),
+            datasets: [{
+                label: '1ピクセルあたりの平均変化レベル',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.2,
+                fill: false,
+                pointRadius: 0
+            }, {
+                label: '通知しきい値',
+                data: Array(MAX_DATA_POINTS).fill(thresholdLineValue),
+                borderColor: 'rgb(255, 99, 132)',
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+            }]
+        },
+        options: {
+            animation: false,
+            scales: {
+                y: {
+                    min: 0,
+                    max: 200, // 平均変化レベルの表示範囲を調整 (最大765だが平均は低い)
+                    title: {
+                        display: true,
+                        text: '平均ピクセル差分 (0-765)'
+                    }
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' }
+            }
+        }
+    });
+}
+
+// グラフデータの更新
+function updateChart(averageChangeMagnitude) {
+    if (!chartInstance) return;
+    
+    const dataSet = chartInstance.data.datasets[0].data;
+    dataSet.push(averageChangeMagnitude);
+    
+    if (dataSet.length > MAX_DATA_POINTS) {
+        dataSet.shift();
+    }
+    
+    // グラフのしきい値ラインもデータ数に合わせて調整
+    const currentThreshold = parseInt(thresholdSlider.value) * SENSITIVITY_MULTIPLIER;
+    chartInstance.data.datasets[1].data = Array(dataSet.length).fill(currentThreshold);
+    
+    chartInstance.update();
+}
+
+
 // =================================================================
-// 通知機能 (Notification API)
+// 通知機能 (Notification API - キー不要)
 // =================================================================
 
 function showNotification(targetUrl) {
-    // 1. デスクトップ通知の設定
     const notification = new Notification('🚨 警告：動きを検出しました！', {
         body: '設定領域で画像の変化を検出。画面を確認してください。',
-        icon: 'https://via.placeholder.com/128' // 適切なアイコンURLに置き換えてください
+        icon: 'https://via.placeholder.com/128' 
     });
 
-    // 2. 通知クリック時のイベントハンドラを設定
     notification.onclick = function() {
-        // 事前に登録したURLに遷移 (新しいウィンドウ/タブで開く)
         window.open(targetUrl, '_blank');
         notification.close();
     };
@@ -40,7 +120,6 @@ function showNotification(targetUrl) {
 function triggerNotificationLocal() {
     const notificationUrl = document.getElementById('notificationUrl').value || 'https://www.google.com/';
 
-    // 1. ユーザーに通知の許可を求める（一度だけ必要）
     if (Notification.permission === 'default') {
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
@@ -48,11 +127,10 @@ function triggerNotificationLocal() {
             }
         });
     } else if (Notification.permission === 'granted') {
-        // 2. 許可済みであれば通知を表示
         showNotification(notificationUrl);
     }
-    // 'denied'（拒否）の場合は何もしない
 }
+
 
 // =================================================================
 // 監視ロジック
@@ -62,12 +140,13 @@ function triggerNotificationLocal() {
 startButton.addEventListener('click', () => {
     if (isMonitoring) return;
 
-    // 通知許可を事前に確認/要求
     if (Notification.permission === 'default') {
         Notification.requestPermission();
     }
     
-    // Webカメラへのアクセス要求
+    const initialThreshold = parseInt(thresholdSlider.value);
+    initializeChart(initialThreshold); // グラフを初期化
+
     navigator.mediaDevices.getUserMedia({ video: true })
         .then(stream => {
             video.srcObject = stream;
@@ -91,8 +170,11 @@ stopButton.addEventListener('click', () => {
         monitoringInterval = null;
     }
     if (video.srcObject) {
-        // ストリームの停止
         video.srcObject.getTracks().forEach(track => track.stop());
+    }
+    if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
     }
     lastFrameData = null;
     isMonitoring = false;
@@ -102,56 +184,58 @@ stopButton.addEventListener('click', () => {
 
 function startMonitoring() {
     isMonitoring = true;
-    lastFrameData = null; // 監視開始時に基準フレームをリセット
-
-    // 100ms（1秒間に10回）間隔でフレームを処理
-    monitoringInterval = setInterval(processFrame, 100); 
+    lastFrameData = null;
+    monitoringInterval = setInterval(processFrame, 100); // 10FPSで処理
 }
 
 function processFrame() {
     if (!isMonitoring) return;
 
-    // 映像をCanvasに描画
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const currentFrameData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
     if (!lastFrameData) {
-        // 最初のフレームを基準フレームとして保存し、処理を終了
         lastFrameData = new Uint8ClampedArray(currentFrameData);
-        console.log("監視を開始しました。");
         return;
     }
 
-    // 感度レベルの取得 (ユーザー設定)
-    const pixelChangeThreshold = parseInt(thresholdSlider.value); // 10〜100
-
+    const pixelChangeThreshold = parseInt(thresholdSlider.value);
+    const thresholdValue = pixelChangeThreshold * SENSITIVITY_MULTIPLIER;
+    
     let diffPixels = 0;
+    let totalMagnitude = 0; // グラフ用：変化の総量を蓄積
     const totalPixels = (canvas.width * canvas.height);
+    const pixelCount = currentFrameData.length / 4; // 総ピクセル数
 
-    // 全ピクセルをチェック
+    // 全ピクセルをチェックし、差分を計算
     for (let i = 0; i < currentFrameData.length; i += 4) {
-        // R, G, B値の差分合計
         const diffR = Math.abs(currentFrameData[i] - lastFrameData[i]);
         const diffG = Math.abs(currentFrameData[i + 1] - lastFrameData[i + 1]);
         const diffB = Math.abs(currentFrameData[i + 2] - lastFrameData[i + 2]);
         
-        // 差分がしきい値を超えたら「変化あり」
-        // しきい値の最大値はR/G/Bそれぞれ255*3 = 765
-        if (diffR + diffG + diffB > pixelChangeThreshold * 7.65) { // 7.65を乗じて 10(低感度)〜765(高感度)に調整
+        const sumDiff = diffR + diffG + diffB;
+        totalMagnitude += sumDiff;
+        
+        // ユーザー設定のしきい値を超えたピクセル数をカウント
+        if (sumDiff > thresholdValue) { 
             diffPixels++;
         }
     }
 
-    // 変化したピクセル数が全体の一定割合を超えたら通知
+    // グラフ更新: 1ピクセルあたりの平均変化量
+    const averageChangeMagnitude = totalMagnitude / pixelCount;
+    updateChart(averageChangeMagnitude); 
+
+    // 通知判定: 変化したピクセル数が一定の割合を超えたら通知
     const changePercentage = diffPixels / totalPixels;
-    if (changePercentage > 0.005) { // 例: 全体の0.5%以上のピクセルが変化したら
+    if (changePercentage > NOTIFICATION_PIXEL_PERCENTAGE) {
         console.log(`!!! 変化検出: ${Math.round(changePercentage * 1000) / 10}% !!!`);
         triggerNotificationLocal(); 
 
-        // 通知後、直後のフレームを新しい基準として保存し、通知の連続を防ぐ（シンプルな制御）
+        // 通知の誤爆を防ぐため、検出後は直前のフレームを新しい基準フレームとして保存
         lastFrameData = new Uint8ClampedArray(currentFrameData);
     } else {
-        // 変化が少なければ、現行フレームを次の比較のための基準フレームとして保存
+        // 変化がなければ、次の比較のために現行フレームを基準として保存
         lastFrameData = new Uint8ClampedArray(currentFrameData);
     }
 }
