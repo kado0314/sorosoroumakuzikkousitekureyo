@@ -26,7 +26,16 @@
             <label for="thresholdSlider">感度レベル (しきい値): <span id="thresholdValue">50</span></label>
             <input type="range" id="thresholdSlider" min="0" max="200" value="50">
         </div>
+        
+        <div class="setting">
+            <label for="notificationTitle">通知タイトル:</label>
+            <input type="text" id="notificationTitle" value="🚨 動きを検出しました！">
+        </div>
 
+        <div class="setting">
+            <label for="notificationBody">通知本文:</label>
+            <input type="text" id="notificationBody" value="画面を確認してください。">
+        </div>
         <div class="setting">
             <label for="notificationUrl">通知クリック時のURL:</label>
             <input type="url" id="notificationUrl" value="https://www.google.com/" placeholder="URLを入力">
@@ -45,5 +54,3 @@
     <script src="main.js"></script>
 </body>
 </html>
-
-
