@@ -6,17 +6,18 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/cocossd.min.js"></script>
     
     <style>
         body { font-family: sans-serif; padding: 20px; }
-        #webcamVideo { display: block; border: 1px solid #ccc; margin-bottom: 10px; position: absolute; }
-        /* 検出結果のオーバーレイを映像の上に重ねるためのスタイル */
-        #overlayCanvas { position: absolute; top: 0; left: 0; border: 1px solid red; }
-        #videoContainer { position: relative; width: 640px; height: 480px; margin-bottom: 20px; }
+        #webcamVideo { display: block; position: absolute; }
+        /* 検出結果のオーバーレイを映像の上に重ねる */
+        #overlayCanvas { position: absolute; top: 0; left: 0; }
+        /* 映像とCanvasを保持するコンテナ */
+        #videoContainer { position: relative; width: 640px; height: 480px; margin-bottom: 20px; border: 1px solid #ccc; }
         #controls { margin-bottom: 20px; }
         .setting { margin-top: 10px; }
+        /* グラフエリア */
         #chartContainer { width: 640px; height: 300px; margin-top: 20px; padding: 10px; border: 1px solid #ddd; }
     </style>
 </head>
@@ -51,4 +52,3 @@
     <script src="main.js"></script>
 </body>
 </html>
-
