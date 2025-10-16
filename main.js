@@ -2,54 +2,62 @@
 
 // DOM要素の取得
 const video = document.getElementById('webcamVideo');
-const overlayCanvas = document.getElementById('overlayCanvas');
-const overlayCtx = overlayCanvas.getContext('2d');
+const canvas = document.getElementById('processingCanvas');
+const ctx = canvas.getContext('2d');
 const startButton = document.getElementById('startButton');
 const stopButton = document.getElementById('stopButton');
-const personCountSlider = document.getElementById('personCountSlider');
-const personCountValueSpan = document.getElementById('personCountValue');
+const thresholdSlider = document.getElementById('thresholdSlider');
+const thresholdValueSpan = document.getElementById('thresholdValue');
 
-let monitoringInterval = null;
-let isMonitoring = false;
-let model = null; // TensorFlow.js モデル
-let chartInstance = null;
-const MAX_DATA_POINTS = 50; // グラフの表示ポイント数
+let lastFrameData = null;      // 基準フレームのピクセルデータを格納
+let monitoringInterval = null; // 監視処理のインターバルID
+let isMonitoring = false;      // 監視状態フラグ
+let chartInstance = null;      // Chart.js インスタンス
 
-// --- UI/チャート関連 ---
+const MAX_DATA_POINTS = 50;
+// 100 * 7.65 = 765 (RGBの最大差分合計)
+const SENSITIVITY_MULTIPLIER = 7.65; 
+// 変化したピクセルが全体の0.5%を超えたら通知
+const NOTIFICATION_PIXEL_PERCENTAGE = 0.005; 
 
-// 通知人数しきい値スライダーの更新
-personCountSlider.addEventListener('input', () => {
-    const value = parseInt(personCountSlider.value);
-    personCountValueSpan.textContent = value;
+// =================================================================
+// UI/チャート関連
+// =================================================================
+
+// 感度レベルスライダーの更新とグラフ更新
+thresholdSlider.addEventListener('input', () => {
+    const value = parseInt(thresholdSlider.value);
+    thresholdValueSpan.textContent = value;
     if (chartInstance) {
         // グラフのしきい値ラインをリアルタイムで更新
+        const newThreshold = value * SENSITIVITY_MULTIPLIER;
         const dataSet = chartInstance.data.datasets[0].data;
-        chartInstance.data.datasets[1].data = Array(dataSet.length).fill(value);
+        chartInstance.data.datasets[1].data = Array(dataSet.length).fill(newThreshold);
         chartInstance.update();
     }
 });
 
-// グラフの初期化
-function initializeChart(initialCount) {
+// グラフの初期化 (画像差分表示用)
+function initializeChart(initialThreshold) {
     if (chartInstance) chartInstance.destroy();
     
     const ctxChart = document.getElementById('changeChart').getContext('2d');
+    const thresholdLineValue = initialThreshold * SENSITIVITY_MULTIPLIER;
 
     chartInstance = new Chart(ctxChart, {
         type: 'line',
         data: {
             labels: Array(MAX_DATA_POINTS).fill(''),
             datasets: [{
-                label: '検出人数',
+                label: '平均ピクセル差分 (現在の変化)',
                 data: [],
                 borderColor: 'rgb(75, 192, 192)',
                 tension: 0.2,
-                fill: true,
-                backgroundColor: 'rgba(75, 192, 192, 0.3)',
+                fill: false,
                 pointRadius: 0
             }, {
                 label: '通知しきい値',
-                data: Array(MAX_DATA_POINTS).fill(initialCount),
+                data: Array(MAX_DATA_POINTS).fill(thresholdLineValue),
                 borderColor: 'rgb(255, 99, 132)',
                 borderDash: [5, 5],
                 pointRadius: 0,
@@ -61,49 +69,45 @@ function initializeChart(initialCount) {
             scales: {
                 y: {
                     min: 0,
-                    max: 5, // Y軸の最大人数（必要に応じて調整）
+                    max: 200, // Y軸の最大値 (平均変化は通常低い)
                     title: {
                         display: true,
-                        text: '検出人数'
-                    },
-                    ticks: {
-                        stepSize: 1 
+                        text: '平均ピクセル差分 (0-765)'
                     }
                 }
             },
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'top' }
-            }
         }
     });
 }
 
 // グラフデータの更新
-function updateChart(detectedPeople) {
+function updateChart(averageChangeMagnitude) {
     if (!chartInstance) return;
     
     const dataSet = chartInstance.data.datasets[0].data;
-    dataSet.push(detectedPeople);
+    dataSet.push(averageChangeMagnitude);
     
     if (dataSet.length > MAX_DATA_POINTS) {
         dataSet.shift();
     }
     
-    // しきい値ラインも更新
-    const currentThreshold = parseInt(personCountSlider.value);
+    // しきい値ラインもデータ数に合わせて調整
+    const currentThreshold = parseInt(thresholdSlider.value) * SENSITIVITY_MULTIPLIER;
     chartInstance.data.datasets[1].data = Array(dataSet.length).fill(currentThreshold);
     
     chartInstance.update();
 }
 
 
-// --- 通知機能 (Notification API - キー不要) ---
+// =================================================================
+// 通知機能 (Notification API)
+// =================================================================
 
-function showNotification(targetUrl, count) {
-    const notification = new Notification('🚨 警告：規定人数以上の人物を検出！', {
-        body: `現在 ${count} 人を検出しました。画面を確認してください。`,
+function showNotification(targetUrl) {
+    const notification = new Notification('🚨 警告：動きを検出しました！', {
+        body: '設定領域で画像の変化を検出。画面を確認してください。',
         icon: 'https://via.placeholder.com/128' 
     });
 
@@ -113,60 +117,50 @@ function showNotification(targetUrl, count) {
     };
 }
 
-function triggerNotificationLocal(count) {
+function triggerNotificationLocal() {
     const notificationUrl = document.getElementById('notificationUrl').value || 'https://www.google.com/';
 
-    // ユーザーに通知の許可を求める（一度だけ必要）
     if (Notification.permission === 'default') {
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
-                showNotification(notificationUrl, count);
+                showNotification(notificationUrl);
             }
         });
     } else if (Notification.permission === 'granted') {
-        showNotification(notificationUrl, count);
+        showNotification(notificationUrl);
     }
 }
 
 
-// --- 監視/人物検出ロジック ---
+// =================================================================
+// 監視ロジック
+// =================================================================
 
-// モデルの読み込みと監視の開始
-startButton.addEventListener('click', async () => {
+// Webカメラの起動
+startButton.addEventListener('click', () => {
     if (isMonitoring) return;
 
     if (Notification.permission === 'default') {
         Notification.requestPermission();
     }
     
-    startButton.textContent = 'モデル読み込み中...';
-    startButton.disabled = true;
+    const initialThreshold = parseInt(thresholdSlider.value);
+    initializeChart(initialThreshold); // グラフを初期化
 
-    try {
-        // 1. COCO-SSDモデルの読み込み
-        // 🌟 ローカルファイルを使用しているため、エラーは発生しにくいはずです 🌟
-        model = await cocoSsd.load();
-        
-        const initialCount = parseInt(personCountSlider.value);
-        initializeChart(initialCount);
-        
-        // 2. Webカメラへのアクセス要求
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-        video.onloadedmetadata = () => {
-            video.play();
-            startMonitoring();
-            startButton.textContent = '監視中';
-            stopButton.disabled = false;
-            isMonitoring = true;
-        };
-    } catch (err) {
-        // ローカルファイルでもアクセス権限の問題などで失敗する可能性はあります
-        console.error("エラーが発生しました:", err);
-        alert("モデルの読み込みまたはWebカメラアクセスに失敗しました。ローカルサーバー(http://localhost)からのアクセスを試してください。");
-        startButton.textContent = '監視スタート';
-        startButton.disabled = false;
-    }
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                video.play();
+                startMonitoring();
+                startButton.disabled = true;
+                stopButton.disabled = false;
+            };
+        })
+        .catch(err => {
+            console.error("Webカメラアクセスエラー:", err);
+            alert("Webカメラへのアクセスを許可してください。またはローカルサーバーからアクセスしてください。");
+        });
 });
 
 // 監視の停止
@@ -182,63 +176,66 @@ stopButton.addEventListener('click', () => {
         chartInstance.destroy();
         chartInstance = null;
     }
-    // Canvasをクリア
-    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    lastFrameData = null;
     isMonitoring = false;
     startButton.disabled = false;
     stopButton.disabled = true;
 });
 
 function startMonitoring() {
-    // 検出処理は負荷が高いため、約4FPS (250ms) で実行
-    monitoringInterval = setInterval(detectFrame, 250); 
+    isMonitoring = true;
+    lastFrameData = null;
+    // 10FPS (100ms) で処理
+    monitoringInterval = setInterval(processFrame, 100); 
 }
 
-// フレームごとの検出処理
-async function detectFrame() {
-    if (!model || !isMonitoring) return;
+function processFrame() {
+    if (!isMonitoring) return;
 
-    // 検出実行
-    const predictions = await tf.tidy(() => model.detect(video));
-    
-    // Canvasをクリアして、検出結果を描画
-    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-    
-    let personCount = 0;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const currentFrameData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
-    // 検出結果を処理
-    predictions.forEach(prediction => {
-        // 信頼度が高い 'person' だけをカウント
-        if (prediction.class === 'person' && prediction.score > 0.6) {
-            personCount++;
-            drawBoundingBox(prediction); // 検出枠を描画
+    if (!lastFrameData) {
+        lastFrameData = new Uint8ClampedArray(currentFrameData);
+        return;
+    }
+
+    const pixelChangeThreshold = parseInt(thresholdSlider.value); 
+    const thresholdValue = pixelChangeThreshold * SENSITIVITY_MULTIPLIER;
+    
+    let diffPixels = 0;
+    let totalMagnitude = 0; 
+    const pixelCount = (canvas.width * canvas.height); // 総ピクセル数
+
+    // 全ピクセルをチェック
+    for (let i = 0; i < currentFrameData.length; i += 4) {
+        const diffR = Math.abs(currentFrameData[i] - lastFrameData[i]);
+        const diffG = Math.abs(currentFrameData[i + 1] - lastFrameData[i + 1]);
+        const diffB = Math.abs(currentFrameData[i + 2] - lastFrameData[i + 2]);
+        
+        const sumDiff = diffR + diffG + diffB;
+        totalMagnitude += sumDiff;
+        
+        // ユーザー設定のしきい値を超えたピクセル数をカウント
+        if (sumDiff > thresholdValue) { 
+            diffPixels++;
         }
-    });
-    
-    // グラフを更新
-    updateChart(personCount);
+    }
+
+    // グラフ更新: 1ピクセルあたりの平均変化量
+    const averageChangeMagnitude = totalMagnitude / pixelCount;
+    updateChart(averageChangeMagnitude); 
 
     // 🌟 通知判定ロジック 🌟
-    const requiredCount = parseInt(personCountSlider.value);
+    const changePercentage = diffPixels / pixelCount;
+    if (changePercentage > NOTIFICATION_PIXEL_PERCENTAGE) {
+        console.log(`!!! 変化検出: ${Math.round(changePercentage * 1000) / 10}% !!!`);
+        triggerNotificationLocal(); 
 
-    if (personCount >= requiredCount) {
-        console.log(`!!! 規定人数 (${requiredCount}人) 以上の人物 (${personCount}人) を検出 !!!`);
-        triggerNotificationLocal(personCount); 
+        // 検出後に基準フレームを更新し、連続通知を抑制
+        lastFrameData = new Uint8ClampedArray(currentFrameData);
+    } else {
+        // 変化がなければ、次の比較のために現行フレームを基準として保存
+        lastFrameData = new Uint8ClampedArray(currentFrameData);
     }
-}
-
-// 検出されたオブジェクトの枠を描画
-function drawBoundingBox(prediction) {
-    const [x, y, width, height] = prediction.bbox;
-    
-    // 枠
-    overlayCtx.strokeStyle = 'red';
-    overlayCtx.lineWidth = 2;
-    overlayCtx.strokeRect(x, y, width, height);
-
-    // ラベル
-    overlayCtx.fillStyle = 'red';
-    overlayCtx.font = '18px Arial';
-    const text = `人 (${Math.round(prediction.score * 100)}%)`;
-    overlayCtx.fillText(text, x, y > 10 ? y - 5 : 20); // y座標を調整して見やすくする
 }
