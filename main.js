@@ -10,6 +10,9 @@ const thresholdSlider = document.getElementById('thresholdSlider');
 const thresholdValueSpan = document.getElementById('thresholdValue');
 const notificationTitleInput = document.getElementById('notificationTitle');
 const notificationBodyInput = document.getElementById('notificationBody');
+const cooldownTimeSecInput = document.getElementById('cooldownTimeSec'); // 🌟 追加: クールダウン設定
+const statusDisplay = document.getElementById('statusDisplay');         // 🌟 追加: ステータス表示
+
 
 let lastFrameData = null;
 let monitoringInterval = null;
@@ -17,19 +20,46 @@ let isMonitoring = false;
 let chartInstance = null;
 
 let lastNotificationTime = 0;
-const NOTIFICATION_COOLDOWN_MS = 5000; // 5秒間隔 (※今回の変更で実質無効化されます)
+// 以前の固定値は削除し、cooldownTimeSecInputから動的に取得します
 
-// 🌟 新規追加: 一度通知を送ったら停止するためのフラグ 🌟
 let hasNotifiedSinceStart = false; 
 
 const MAX_DATA_POINTS = 50;
 
 
 // =================================================================
-// UI/チャート関連 (変更なし)
+// ユーティリティ/UI表示
 // =================================================================
 
-// 感度レベルスライダーの更新とグラフ更新
+// 🌟 新規追加: ステータス表示を更新する関数 🌟
+function updateStatusDisplay(isCooldown = false) {
+    if (!isMonitoring) {
+        statusDisplay.textContent = '監視停止中です';
+        statusDisplay.classList.remove('cooldown-active');
+        return;
+    }
+    
+    if (hasNotifiedSinceStart) {
+        statusDisplay.textContent = '!!! 検出済み - 監視を停止してください !!!';
+        statusDisplay.classList.add('cooldown-active');
+        return;
+    }
+
+    if (isCooldown) {
+        const cooldownTime = parseInt(cooldownTimeSecInput.value) || 5;
+        const elapsed = Date.now() - lastNotificationTime;
+        const remaining = Math.max(0, cooldownTime * 1000 - elapsed);
+        
+        statusDisplay.textContent = `通知クールダウン中... (${(remaining / 1000).toFixed(1)}秒 残り)`;
+        statusDisplay.classList.add('cooldown-active');
+    } else {
+        statusDisplay.textContent = '監視中 - 変化を検出していません';
+        statusDisplay.classList.remove('cooldown-active');
+    }
+}
+
+
+// グラフ関連 (変更なし)
 thresholdSlider.addEventListener('input', () => {
     const value = parseInt(thresholdSlider.value);
     thresholdValueSpan.textContent = value;
@@ -41,13 +71,12 @@ thresholdSlider.addEventListener('input', () => {
     }
 });
 
-// グラフの初期化
 function initializeChart(initialThreshold) {
     if (chartInstance) chartInstance.destroy();
     
     const ctxChart = document.getElementById('changeChart').getContext('2d');
     const thresholdLineValue = initialThreshold;
-
+    // ... (Chart.js設定は変更なし) ...
     chartInstance = new Chart(ctxChart, {
         type: 'line',
         data: {
@@ -86,7 +115,6 @@ function initializeChart(initialThreshold) {
     });
 }
 
-// グラフデータの更新
 function updateChart(averageChangeMagnitude) {
     if (!chartInstance) return;
     
@@ -131,16 +159,20 @@ function showNotification(targetUrl) {
 }
 
 function triggerNotificationLocal() {
-    // 🌟 新規ロジック: 一度通知済みなら即座に終了 🌟
+    // 🌟 一度通知済みなら即座に終了 (完全停止ロジック) 🌟
     if (hasNotifiedSinceStart) {
-        console.log("--- 監視セッション中に通知済みのため、スキップします。 ---");
+        updateStatusDisplay(false); // 停止表示に切り替え
         return;
     }
     
     const currentTime = Date.now();
-    // 5秒のクールダウンチェックは残すが、hasNotifiedSinceStartフラグが優先されるため、一度発動すればこのチェックは無視される
-    if (currentTime - lastNotificationTime < NOTIFICATION_COOLDOWN_MS) {
-        console.log(`--- 通知クールダウン中 (${NOTIFICATION_COOLDOWN_MS / 1000}秒) ---`);
+    // 🌟 修正: ユーザー設定のクールダウン時間を取得 🌟
+    const cooldownTimeSec = parseInt(cooldownTimeSecInput.value) || 5;
+    const cooldownTimeMS = cooldownTimeSec * 1000;
+
+    // クールダウンチェック
+    if (currentTime - lastNotificationTime < cooldownTimeMS) {
+        updateStatusDisplay(true); // クールダウン中表示に切り替え
         return; 
     }
 
@@ -150,8 +182,8 @@ function triggerNotificationLocal() {
     const sendAndSetFlag = () => {
         showNotification(notificationUrl);
         lastNotificationTime = currentTime;
-        hasNotifiedSinceStart = true; // 🌟 フラグをONにする 🌟
-        console.log("!!! 監視セッション中の最初の通知を送信しました。以降の通知は停止します。 !!!");
+        // hasNotifiedSinceStart = true; // 連続通知を停止するロジックは無効化
+        console.log(`!!! 通知を送信しました。次の通知まで${cooldownTimeSec}秒間クールダウンします。 !!!`);
     };
 
     if (Notification.permission === 'default') {
@@ -213,15 +245,17 @@ stopButton.addEventListener('click', () => {
     startButton.disabled = false;
     stopButton.disabled = true;
     lastNotificationTime = 0;
-    hasNotifiedSinceStart = false; // 停止時にリセット
+    hasNotifiedSinceStart = false; 
+    updateStatusDisplay(); // 停止表示に更新
 });
 
 function startMonitoring() {
     isMonitoring = true;
     lastFrameData = null;
     lastNotificationTime = 0;
-    hasNotifiedSinceStart = false; // 🌟 監視開始時にリセット 🌟
+    hasNotifiedSinceStart = false; 
     monitoringInterval = setInterval(processFrame, 100); 
+    updateStatusDisplay(); // 監視中表示に更新
 }
 
 function processFrame() {
@@ -232,6 +266,7 @@ function processFrame() {
 
     if (!lastFrameData) {
         lastFrameData = new Uint8ClampedArray(currentFrameData);
+        updateStatusDisplay(false); // 監視中表示を維持
         return;
     }
 
@@ -250,15 +285,29 @@ function processFrame() {
     updateChart(averageChangeMagnitude); 
 
     const thresholdValue = parseInt(thresholdSlider.value);
-    const difference = averageChangeMagnitude - thresholdValue;
-    console.log(`平均変化: ${averageChangeMagnitude.toFixed(2)} | しきい値: ${thresholdValue} | 差: ${difference.toFixed(2)}`);
     
+    // 🌟 クールダウン表示の更新 🌟
+    const cooldownTimeSec = parseInt(cooldownTimeSecInput.value) || 5;
+    const cooldownTimeMS = cooldownTimeSec * 1000;
+    const isCooldownActive = Date.now() - lastNotificationTime < cooldownTimeMS;
+
     if (averageChangeMagnitude > thresholdValue) {
-        console.log(`>>> 通知トリガー発動!`);
-        triggerNotificationLocal(); 
+        if (!isCooldownActive) {
+            console.log(`>>> 通知トリガー発動!`);
+            triggerNotificationLocal(); 
+        } else {
+            // トリガー条件は満たしているがクールダウン中
+            updateStatusDisplay(true); 
+        }
 
         lastFrameData = new Uint8ClampedArray(currentFrameData);
     } else {
         lastFrameData = new Uint8ClampedArray(currentFrameData);
+        // クールダウン中でない、またはクールダウンが終了したばかりなら、通常の監視中に戻す
+        if (!isCooldownActive && isMonitoring) {
+            updateStatusDisplay(false);
+        } else if (isCooldownActive) {
+             updateStatusDisplay(true); // クールダウン中を維持
+        }
     }
 }
