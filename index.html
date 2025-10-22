@@ -13,6 +13,24 @@
         .setting { margin-top: 10px; }
         /* グラフエリア */
         #chartContainer { width: 640px; height: 300px; margin-top: 20px; padding: 10px; border: 1px solid #ddd; }
+
+        /* 🌟 クールダウン表示スタイル 🌟 */
+        #statusDisplay {
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            background-color: #f0f0f0;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .cooldown-active {
+            color: white;
+            background-color: #ff4d4d; /* 赤色で警告 */
+            border-color: #cc0000;
+        }
     </style>
 </head>
 <body>
@@ -22,6 +40,12 @@
         <button id="startButton">監視スタート</button>
         <button id="stopButton" disabled>監視停止</button>
 
+        <div class="setting">
+            <label for="cooldownTimeSec">通知クールダウン時間 (秒):</label>
+            <input type="number" id="cooldownTimeSec" min="1" max="600" value="5" style="width: 60px; text-align: center;">
+            秒
+        </div>
+        
         <div class="setting">
             <label for="thresholdSlider">感度レベル (しきい値): <span id="thresholdValue">50</span></label>
             <input type="range" id="thresholdSlider" min="0" max="200" value="50">
@@ -51,6 +75,10 @@
             <label for="openWindow">新しいウィンドウで開く</label>
         </div>
         </div>
+    
+    <div id="statusDisplay">
+        監視停止中です
+    </div>
     
     <video id="webcamVideo" width="640" height="480" autoplay muted></video>
     
