@@ -9,7 +9,7 @@ body {
     margin: 0;
     display: flex;
     flex-direction: column;
-    align-items: center; /* 全体を中央揃え */
+    align-items: center; 
 }
 
 h1 {
@@ -21,15 +21,15 @@ h1 {
 
 /* --- 横並びレイアウト設定 --- */
 #main-content-container {
-    display: flex; /* 横並びを有効化 */
-    gap: 20px;     /* 要素間のスペース */
-    align-items: flex-start; /* 上端を揃える */
+    display: flex; 
+    gap: 20px;     
+    align-items: flex-start; 
 }
 
 #left-column {
     display: flex;
-    flex-direction: column; /* コントロールとステータスを縦に並べる */
-    width: 380px; /* 左列の固定幅 */
+    flex-direction: column; 
+    width: 380px; 
 }
 
 #right-column {
@@ -45,7 +45,7 @@ h1 {
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
-    width: 100%; /* 親要素(left-column)に合わせる */
+    width: 100%; 
     box-sizing: border-box;
 }
 
@@ -111,10 +111,17 @@ button:disabled {
     display: block;
     width: 640px;
     height: 480px;
-    border: 5px solid #3498db; /* メインカラーの枠 */
+    border: 5px solid #3498db; 
     border-radius: 8px;
     margin-bottom: 20px;
 }
+
+/* 🌟 修正: 処理専用Canvasを完全に非表示にする 🌟 */
+#processingCanvas {
+    display: none !important; 
+    /* width: 640px; height: 480px; などサイズ指定は保持しますが、display:noneで画面から消します */
+}
+
 
 #chartContainer {
     width: 640px;
