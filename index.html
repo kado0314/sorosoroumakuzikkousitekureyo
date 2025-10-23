@@ -2,95 +2,77 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="css/style.css">
     <title>Webカメラ監視＆画像差分通知</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
-    <style>
-        body { font-family: sans-serif; padding: 20px; }
-        #webcamVideo { display: block; border: 1px solid #ccc; margin-bottom: 10px; }
-        #processingCanvas { display: none; } 
-        #controls { margin-bottom: 20px; }
-        .setting { margin-top: 10px; }
-        /* グラフエリア */
-        #chartContainer { width: 640px; height: 300px; margin-top: 20px; padding: 10px; border: 1px solid #ddd; }
-
-        /* 🌟 クールダウン表示スタイル 🌟 */
-        #statusDisplay {
-            padding: 10px;
-            margin-top: 10px;
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #333;
-            background-color: #f0f0f0;
-            border: 2px solid #ccc;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .cooldown-active {
-            color: white;
-            background-color: #ff4d4d; /* 赤色で警告 */
-            border-color: #cc0000;
-        }
-    </style>
+    <link rel="stylesheet" href="css/style.css"> 
 </head>
 <body>
     <h1>Webカメラ監視システム (画像差分)</h1>
 
-    <div id="controls">
-        <button id="startButton">監視スタート</button>
-        <button id="stopButton" disabled>監視停止</button>
-
-        <div class="setting">
-            <label for="cooldownTimeSec">通知クールダウン時間 (秒):</label>
-            <input type="number" id="cooldownTimeSec" min="1" max="600" value="5" style="width: 60px; text-align: center;">
-            秒
-        </div>
+    <div id="main-content-container">
         
-        <div class="setting">
-            <label for="thresholdSlider">感度レベル (しきい値): <span id="thresholdValue">50</span></label>
-            <input type="range" id="thresholdSlider" min="0" max="200" value="50">
-        </div>
-        
-        <div class="setting">
-            <label for="notificationTitle">通知タイトル:</label>
-            <input type="text" id="notificationTitle" value="🚨 動きを検出しました！">
-        </div>
-
-        <div class="setting">
-            <label for="notificationBody">通知本文:</label>
-            <input type="text" id="notificationBody" value="画面を確認してください。">
-        </div>
-
-        <div class="setting">
-            <label for="notificationUrl">通知クリック時のURL:</label>
-            <input type="url" id="notificationUrl" value="https://www.google.com/" placeholder="URLを入力">
-        </div>
-        
-        <div class="setting" style="margin-top: 15px;">
-            <label>通知クリック時の動作 (デフォルト: Google):</label><br>
-            <input type="radio" id="openTab" name="openAction" value="tab" checked> 
-            <label for="openTab">新しいタブで開く</label><br>
+        <div id="left-column">
             
-            <input type="radio" id="openWindow" name="openAction" value="window"> 
-            <label for="openWindow">新しいウィンドウで開く</label>
-        </div>
-        </div>
-    
-    <div id="statusDisplay">
-        監視停止中です
-    </div>
-    
-    <video id="webcamVideo" width="640" height="480" autoplay muted></video>
-    
-    <canvas id="processingCanvas" width="640" height="480"></canvas>
-    
-    <div id="chartContainer">
-        <h2>リアルタイム変化レベル</h2>
-        <canvas id="changeChart"></canvas>
-    </div>
+            <div id="controls">
+                <button id="startButton">監視スタート</button>
+                <button id="stopButton" disabled>監視停止</button>
 
+                <div class="setting">
+                    <label for="cooldownTimeSec">通知クールダウン時間 (秒):</label>
+                    <input type="number" id="cooldownTimeSec" min="1" max="600" value="5" style="width: 60px; text-align: center;">
+                    秒
+                </div>
+                
+                <div class="setting">
+                    <label for="thresholdSlider">感度レベル (しきい値): <span id="thresholdValue">50</span></label>
+                    <input type="range" id="thresholdSlider" min="0" max="200" value="50">
+                </div>
+                
+                <div class="setting">
+                    <label for="notificationTitle">通知タイトル:</label>
+                    <input type="text" id="notificationTitle" value="🚨 動きを検出しました！">
+                </div>
+
+                <div class="setting">
+                    <label for="notificationBody">通知本文:</label>
+                    <input type="text" id="notificationBody" value="画面を確認してください。">
+                </div>
+
+                <div class="setting">
+                    <label for="notificationUrl">通知クリック時のURL:</label>
+                    <input type="url" id="notificationUrl" value="https://www.google.com/" placeholder="URLを入力">
+                </div>
+                
+                <div class="setting" style="margin-top: 15px;">
+                    <label>通知クリック時の動作 (デフォルト: Google):</label><br>
+                    <input type="radio" id="openTab" name="openAction" value="tab" checked> 
+                    <label for="openTab">新しいタブで開く</label><br>
+                    
+                    <input type="radio" id="openWindow" name="openAction" value="window"> 
+                    <label for="openWindow">新しいウィンドウで開く</label>
+                </div>
+            </div>
+            
+            <div id="statusDisplay">
+                監視停止中です
+            </div>
+        </div>
+        
+        <div id="right-column">
+            <div id="visual-monitoring-container">
+                <video id="webcamVideo" width="640" height="480" autoplay muted></video>
+                
+                <canvas id="processingCanvas" width="640" height="480"></canvas>
+                
+                <div id="chartContainer">
+                    <h2>リアルタイム変化レベル</h2>
+                    <canvas id="changeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
     <script src="main.js"></script>
 </body>
 </html>
-
