@@ -17,7 +17,6 @@ h1 {
     margin-bottom: 25px;
     border-bottom: 3px solid #3498db;
     padding-bottom: 5px;
-    /* ハンバーガーメニューと重ならないように少しマージン調整 */
     margin-top: 10px;
 }
 
@@ -192,7 +191,7 @@ input[type="radio"] + label {
     display: block;
     width: 100%;
     height: 4px;
-    background-color: #2c3e50;
+    background-color: #2c3e50; /* 線の色は濃い色 */
     border-radius: 4px;
     transition: all 0.3s ease;
 }
@@ -215,8 +214,11 @@ input[type="radio"] + label {
     left: -300px; /* 最初は画面外に隠す */
     width: 250px;
     height: 100%;
-    background-color: #34495e; /* 濃い青グレー */
-    box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+    
+    /* ▼▼▼ ここを変更：背景を白く明るく ▼▼▼ */
+    background-color: #ffffff; 
+    
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1); /* 影を少し柔らかく */
     transition: left 0.3s ease;
     z-index: 1500;
     padding-top: 70px; /* ハンバーガーボタンの下から開始 */
@@ -242,14 +244,18 @@ input[type="radio"] + label {
     align-items: center;
     padding: 15px 20px;
     text-decoration: none;
-    color: #ecf0f1; /* 文字色：白系 */
+    
+    /* ▼▼▼ ここを変更：背景が白なので文字は濃い色に ▼▼▼ */
+    color: #333333; 
+    border-bottom: 1px solid #f0f0f0; /* 区切り線も薄いグレーに */
+    
     font-size: 1.1em;
-    border-bottom: 1px solid #2c3e50;
     transition: background 0.2s;
 }
 
+/* ホバー時の色も明るい薄い水色に変更 */
 .sidebar a:hover {
-    background-color: #2c3e50; /* ホバー時の色 */
+    background-color: #e6f7ff; 
 }
 
 /* アイコン画像のスタイル（丸く切り抜く） */
@@ -259,5 +265,8 @@ input[type="radio"] + label {
     border-radius: 50%; /* 完全な円 */
     object-fit: cover;
     margin-right: 15px; /* 文字との間隔 */
-    border: 2px solid #fff;
+    
+    /* ▼▼▼ ここを変更：背景が白なので枠線を目立つ薄グレーに ▼▼▼ */
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
