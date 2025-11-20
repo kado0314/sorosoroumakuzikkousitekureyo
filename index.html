@@ -8,9 +8,34 @@
     <link rel="stylesheet" href="css/style.css"> 
 </head>
 <body>
-    <a href="https://kado0314.github.io/PBLcamera/" class="top-left-logo">
-        <img src="css/2_1120100308.png" alt="Logo">
-    </a>
+    <div class="hamburger-menu" id="hamburgerMenu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
+    <nav class="sidebar" id="sidebar">
+        <ul>
+            <li>
+                <a href="https://kado0314.github.io/PBLcamera/">
+                    <img src="css/kansikameraaikon.png" alt="ホーム">
+                    <span>ホーム</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://kado0314.github.io/PBLcamera/Typamera/templates/typing.html">
+                    <img src="css/kibodoaikon.png" alt="タイピング">
+                    <span>タイピング</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://pblcamera.onrender.com/scoring/">
+                    <img src="css/fassyonaikon.png" alt="ファッション採点">
+                    <span>ファッション採点</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
     <h1>Webカメラ監視システム (画像差分)</h1>
 
     <div id="main-content-container">
@@ -78,5 +103,15 @@
     </div>
 
     <script src="main.js"></script>
+
+    <script>
+        const hamburger = document.getElementById('hamburgerMenu');
+        const sidebar = document.getElementById('sidebar');
+
+        hamburger.addEventListener('click', () => {
+            sidebar.classList.toggle('active'); // クラスを付け外しして表示切り替え
+            hamburger.classList.toggle('open'); // ハンバーガーボタンのアニメーション用
+        });
+    </script>
 </body>
 </html>
