@@ -116,12 +116,10 @@ button:disabled {
     margin-bottom: 20px;
 }
 
-/* 🌟 修正: 処理専用Canvasを完全に非表示にする 🌟 */
+/* 処理専用Canvasを非表示にする設定 */
 #processingCanvas {
     display: none !important; 
-    /* width: 640px; height: 480px; などサイズ指定は保持しますが、display:noneで画面から消します */
 }
-
 
 #chartContainer {
     width: 640px;
@@ -159,7 +157,7 @@ button:disabled {
 
 .cooldown-active {
     color: white !important;
-    background-color: #f39c12 !important; /* オレンジ色でクールダウン中を強調 */
+    background-color: #f39c12 !important;
     border-color: #e67e22 !important;
 }
 
@@ -168,4 +166,29 @@ input[type="radio"] + label {
     display: inline;
     font-weight: normal;
     margin-right: 15px;
+}
+
+/* =========================================
+   ▼▼▼ 左上ロゴアイコン用スタイル ▼▼▼
+   ========================================= */
+
+.top-left-logo {
+    position: absolute; /* 画面の左上に固定配置 */
+    top: 20px;
+    left: 20px;
+    z-index: 1000;      /* 他の要素より手前に表示 */
+    transition: transform 0.3s ease;
+}
+
+.top-left-logo:hover {
+    transform: scale(1.1); /* マウスホバーで少し拡大 */
+}
+
+.top-left-logo img {
+    width: 80px;        /* アイコンサイズ調整 */
+    height: 80px;
+    border-radius: 50%; /* 画像を丸くする */
+    object-fit: cover;  /* 比率を崩さずトリミング */
+    border: 3px solid #fff; /* 白いフチをつけて目立たせる */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* 影をつける */
 }
